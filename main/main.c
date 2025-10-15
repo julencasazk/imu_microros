@@ -8,7 +8,6 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "driver/uart.h"
-#include "driver/gpio.h"
 
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
@@ -28,41 +27,42 @@
 
 bool interrupt_flag = false;
 
-rcl_publisher_t publisher;
-rcl_subscription_t subscriber;
+rcl_publisher_t throttle_publisher;
+rcl_publisher_t brake_publisher;
+rcl_subscription_t speed_subscriber;
+
 std_msgs__msg__Float32 msg;
 
 void subscription_callback(const void * msgin)
 {
 	const std_msgs__msg__Float32 * incoming_msg = (const std_msgs__msg__Float32 *)msgin;
 	msg.data = incoming_msg->data;
-    if (msg.data > SPEED_THRESHOLD && !interrupt_flag) {
-        // Trace on GPIO21 when publishing
-        // Lets hope this small pulse registers in the other board's interrupt pin
-        gpio_set_level(GPIO_NUM_21, 1);
-		interrupt_flag = true;
-	} else if (msg.data <= SPEED_THRESHOLD) {
-		interrupt_flag = false;
-    } 
-	
-	RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
-        gpio_set_level(GPIO_NUM_21, 0);
+}
+
+
+void control_task(void *arg)
+{
+	while(1){
+		std_msgs__msg__Float32 brake_msg;
+		std_msgs__msg__Float32 throttle_msg;
+		if (msg.data < SPEED_THRESHOLD) {
+			brake_msg.data = 0.0f; 
+			throttle_msg.data = 1.0f; 
+		} else {
+			brake_msg.data = 1.0f;
+			throttle_msg.data = 0.0f;
+		}
+		RCSOFTCHECK(rcl_publish(&brake_publisher, &brake_msg, NULL));
+		RCSOFTCHECK(rcl_publish(&throttle_publisher, &throttle_msg, NULL));
+		usleep(100);
+	}
+
+	vTaskDelete(NULL);
 }
 
 
 void micro_ros_task(void * arg)
 {
-
-    // Configure GPIO for timing analysis output
-    gpio_config_t out_conf = {
-        .pin_bit_mask = (1ULL<<GPIO_NUM_21),
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-
-	gpio_config(&out_conf);
 
 	rcl_allocator_t allocator = rcl_get_default_allocator();
 	rclc_support_t support;
@@ -72,18 +72,24 @@ void micro_ros_task(void * arg)
 
 	// create node
 	rcl_node_t node;
-	RCCHECK(rclc_node_init_default(&node, "speed_esp32_node", "", &support));
+	RCCHECK(rclc_node_init_default(&node, "platooning_control_esp32_micro_ros", "", &support));
 
 	// create publisher
 	RCCHECK(rclc_publisher_init_best_effort(
-		&publisher,
+		&throttle_publisher,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-		"speed_esp32"));
+		"throttle_cmd"));
+
+	RCCHECK(rclc_publisher_init_best_effort(
+		&brake_publisher,
+		&node,
+		ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+		"brake_cmd"));
 
 	// create subscriber
 	RCCHECK(rclc_subscription_init_best_effort(
-		&subscriber,
+		&speed_subscriber,
 		&node,
 		ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
 		"speed_debug"));
@@ -94,7 +100,7 @@ void micro_ros_task(void * arg)
 	RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
 	RCCHECK(rclc_executor_add_subscription(
 		&executor,
-		&subscriber,
+		&speed_subscriber,
 		&msg,
 		subscription_callback,
 		ON_NEW_DATA));
@@ -103,12 +109,13 @@ void micro_ros_task(void * arg)
 
 	while(1){
 		rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
-		usleep(1);
+		usleep(100);
 	}
 
 	// free resources
-	RCCHECK(rcl_publisher_fini(&publisher, &node));
-	RCCHECK(rcl_subscription_fini(&subscriber, &node));
+	RCCHECK(rcl_publisher_fini(&throttle_publisher, &node));
+	RCCHECK(rcl_publisher_fini(&brake_publisher, &node));
+	RCCHECK(rcl_subscription_fini(&speed_subscriber, &node));
 	RCCHECK(rcl_node_fini(&node));
 
   	vTaskDelete(NULL);
@@ -138,4 +145,12 @@ void app_main(void)
             NULL,
             CONFIG_MICRO_ROS_APP_TASK_PRIO,
             NULL);
+
+	usleep(2000000); // Sleep for 2 seconds to let micro-ROS initialize
+	xTaskCreate(control_task,
+			"control_task",
+			4096,
+			NULL,
+			10,
+			NULL);
 }
