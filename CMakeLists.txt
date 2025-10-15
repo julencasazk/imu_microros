@@ -5,4 +5,4 @@
 cmake_minimum_required(VERSION 3.5)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(platooning_control_esp32_micro_ros)
+project(speed_sens_esp32)
