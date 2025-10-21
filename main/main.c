@@ -44,7 +44,7 @@ std_msgs__msg__Float32 brake_msg;
 std_msgs__msg__Float32 steer_msg;
 std_msgs__msg__Bool reverse_msg;
 
-static size_t uart_port = UART_NUM_0;
+static uart_port_t uart_port = UART_NUM_0;
 
 void throttle_cb(const void * msgin)
 {
@@ -220,7 +220,12 @@ void micro_ros_task(void * arg)
 	RCCHECK(rcl_publisher_fini(&throttle_publisher, &node));
 	RCCHECK(rcl_publisher_fini(&brake_publisher, &node));
 	RCCHECK(rcl_publisher_fini(&steer_publisher, &node));
-	RCCHECK(rcl_publisher_fini(&brake_publisher, &node));
+	RCCHECK(rcl_publisher_fini(&reverse_publisher, &node));
+
+	RCCHECK(rcl_subscription_fini(&throttle_subscriber, &node));
+	RCCHECK(rcl_subscription_fini(&brake_subscriber, &node));
+	RCCHECK(rcl_subscription_fini(&steer_subscriber, &node));
+	RCCHECK(rcl_subscription_fini(&reverse_subscriber, &node));
 
 	RCCHECK(rclc_executor_fini(&executor));
 	RCCHECK(rcl_node_fini(&node));
