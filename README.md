@@ -1,5 +1,11 @@
 # __ESP32 Platooning node using micro-ROS__
 
+## Requirements
+Following the official [micro-ROS component for ESP-IDF](https://github.com/micro-ROS/micro_ros_espidf_component), install the following requirements:
+```
+. $IDF_PATH/export.sh
+pip3 install catkin_pkg lark-parser colcon-common-extensions
+```
 
 ## Setup
 
@@ -21,7 +27,29 @@ Before building the firmware, check if there's anything using the port, as it wi
 ```
 sudo lsof /dev/ttyUSB0
 ```
-Still from the project root run:
+
+From the project root directory, run:
 ```
-sudo docker run -it --rm --device /dev/ttyUSB0 --user root --volume="/etc/timezone:/etc/timezone:ro" -v  $(pwd):/platooning_control_esp32_micro_ros --workdir /platooning_control_esp32_micro_ros microros/esp-idf-microros:latest /bin/bash  -c "idf.py menuconfig build flash"
+idf.py menuconfig build flash -p /dev/ttyUSB0 
 ```
+- Make sure UART port is properly configured in `menuconfig`. It's under `micro-ROS Settings ---> UART Settings --->`
+
+If docker is installed, the project can also be built and flashed from the official ESP-IDF docker container with micro-ROS. From the project root run:
+```
+sudo docker run -it --rm --device /dev/ttyUSB0 --user root --volume="/etc/timezone:/etc/timezone:ro" -v  $(pwd):/$(basename "$PWD") --workdir /$(basename "$PWD") microros/esp-idf-microros:latest /bin/bash  -c "idf.py menuconfig build flash"
+```
+- Still, building and flashing like this will prevent you from just flashing or just monitoring the board from outside the docker container, without having to clean and rebuild from outside.
+## Troubleshooting
+
+- Make sure that you are sourcing ESP-IDF and running idf.py from the Python environment you used to run the `install.sh` when installing ESP-IDF.
+- If something failed when building micro-ROS libs, clean the micro-ROS build with:
+```
+idf.py clean-microros # Will clean uROS if built, or build it if already cleaned
+```
+- If when building the micro-ROS libs this error pops up:
+```
+  AttributeError: module 'em' has no attribute 'BUFFERED_OPT'
+```
+Make sure you have `empy==3.3.4` installed. This issue seems to be related to ROS Humble and newer `>=4` versions of `empy`.
+
+    
