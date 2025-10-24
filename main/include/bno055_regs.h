@@ -176,10 +176,6 @@ typedef struct
 } bno055_lin_accel_t;
 
 
-
-
-
-
 #define BNO055_I2C_ADDR_PRIMARY   0x28
 #define BNO055_I2C_ADDR_ALTERNATE 0x29
 
