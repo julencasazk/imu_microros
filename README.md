@@ -1,9 +1,6 @@
-# __Manual Control of a CARLA Ego Vehicle with micro-ROS__
-This project contains the firmware for a ESP32 app that subscribes to ROS topics through micro-ROS and publishes to corresponding topics.
+# __IMU Reading with ESP32 and micro-ROS__
+This project contains the firmware for a ESP32 app that publishes data from a BNO055 IMU sensor through micro-ROS to a ROS2 network.
 
-It is simply a project to test basic micro-ROS functionality with CARLA sim using a custom bridge from CARLA to ROS.
-
-The Python scripts to launch the ROS nodes to make this project work are in [this repo](https://github.com/julencasazk/carla_scripts).
 
 ## Requirements
 Following the official [micro-ROS component for ESP-IDF](https://github.com/micro-ROS/micro_ros_espidf_component), install the following requirements:
