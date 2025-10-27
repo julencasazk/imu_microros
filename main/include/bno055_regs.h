@@ -8,6 +8,7 @@
 
 typedef enum
 {
+    // PAGE 0
     BNO055_CHIP_ID              = 0x00,
     BNO055_ACC_ID               = 0x01,
     BNO055_MAG_ID               = 0x02,
@@ -108,8 +109,10 @@ typedef enum
     BNO055_ACC_RADIUS_MSB       = 0x68,
     BNO055_MAG_RADIUS_LSB       = 0x69,
     BNO055_MAG_RADIUS_MSB       = 0x6A,
+    
+    // PAGE 1
 
-    BNO055_PAGE1_PAGE_ID        = 0x07,
+
     BNO055_ACC_CONFIG           = 0x08,
     BNO055_MAG_CONFIG           = 0x09,
     BNO055_GYR_CONFIG_0         = 0x0A,
@@ -152,6 +155,11 @@ typedef enum
     BNO055_OPERATION_MODE_NDOF_FMC_OFF = 0x0B,
     BNO055_OPERATION_MODE_NDOF = 0x0C
 } bno055_opmode_t;
+
+typedef enum {
+    BNO055_PAGE_ZERO = 0x00,
+    BNO055_PAGE_ONE = 0x01
+} bno055_page_num;
 
 typedef struct
 {
