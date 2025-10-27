@@ -217,6 +217,7 @@ void i2c_read(uint8_t reg, uint8_t *buff, uint8_t len, uint32_t timeout)
 	
 }
 
+// Function to verify that IMU sensor is in default address (ADR Pin Low)
 static void i2c_scan(void) {
     for (uint8_t addr = 1; addr < 0x7F; addr++) {
         i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -236,9 +237,9 @@ void imu_read_task(void * arg)
 {
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
-        .sda_io_num = GPIO_NUM_21,          // SDA
-        .scl_io_num = GPIO_NUM_22,          // SCL
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,  // enable even with 10k externals
+        .sda_io_num = GPIO_NUM_21,
+        .scl_io_num = GPIO_NUM_22,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE, 
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = 100000,
     };
