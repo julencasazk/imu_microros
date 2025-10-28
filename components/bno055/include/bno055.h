@@ -1,5 +1,9 @@
-#ifndef BNO055_REGS_H
-#define BNO055_REGS_H
+#ifndef BNO055_H
+#define BNO055_H
+
+
+#include <stdint.h>
+#include "esp_err.h"
 
 // ============================================================================
 // Bosch BNO055 9-DOF IMU Register Address Map
@@ -138,7 +142,10 @@ typedef enum
     BNO055_GYR_AM_SET           = 0x1F,
     BNO055_UNIQUE_ID_START      = 0x50,   // through 0x5F
 } bno055_reg_t;
+// ===========================================
+// END REGISTER MAP
 
+// BNO055 OPERATION MODES
 typedef enum 
 {
     BNO055_OPERATION_MODE_CONFIG = 0x00,
@@ -156,11 +163,14 @@ typedef enum
     BNO055_OPERATION_MODE_NDOF = 0x0C
 } bno055_opmode_t;
 
+// Page Number, multiplexes register addresses
 typedef enum {
     BNO055_PAGE_ZERO = 0x00,
     BNO055_PAGE_ONE = 0x01
 } bno055_page_num;
 
+// READING DATA TYPES
+// ===========================================
 typedef struct
 {
     float x;
@@ -182,9 +192,21 @@ typedef struct
     float y;
     float z;
 } bno055_lin_accel_t;
+// ===============================================
+// DATA TYPES END
 
-
+// Both posible addresses, depends on COM3/I2C_ADDR pin
+// or ADR pin on Adafruit breakout board
 #define BNO055_I2C_ADDR_PRIMARY   0x28
 #define BNO055_I2C_ADDR_ALTERNATE 0x29
 
-#endif // BNO055_REGS_H
+esp_err_t bno055_init(uint8_t *opr_mode, uint8_t *unit_sel);
+esp_err_t bno055_set_mode(uint8_t mode);
+esp_err_t bno055_read_gyro(bno055_gyro_t* gyro_data);
+esp_err_t bno055_read_linear_acceleration(bno055_lin_accel_t* accel_data);
+esp_err_t bno055_read_quaternion(bno055_quaternion_t* quat_data);
+uint8_t bno055_get_chip_id(void);
+esp_err_t bno055_set_unit_selection(uint8_t unit);
+
+
+#endif // BNO055_H
