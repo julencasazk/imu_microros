@@ -9,31 +9,60 @@
 #include "esp_system.h"
 
 
-static const char *TAG = "BNO055";
+static const char *TAG = "BNO055"; // TAG for ESP32 logging
+struct bno055_dev {
+    i2c_port_t i2c_port;
+    uint8_t addr;
+    SemaphoreHandle_t lock; // Optional for thread safety 
+};
 
-static esp_err_t bno055_write_register(uint8_t reg, uint8_t *data, size_t len) {
-    return i2c_bus_write(BNO055_I2C_ADDR_PRIMARY, reg, data, len);
-}
 
-static esp_err_t bno055_read_register(uint8_t reg, uint8_t *data, size_t len) {
-    return i2c_bus_read(BNO055_I2C_ADDR_PRIMARY, reg, data, len);
-}
-
-esp_err_t bno055_set_mode(uint8_t mode)
+bno055_dev_t* bno055_create(i2c_port_t i2c_port, uint8_t addr)
 {
-    return bno055_write_register(BNO055_OPR_MODE, &mode, 1); 
+    bno055_dev_t *dev = calloc(1, sizeof(*dev)); // Equivalent to heap_caps_calloc(p, MALLOC_CAP_8BIT)
+    if (!dev) {
+        ESP_LOGE(TAG, "Failed to allocate memory for BNO055 device");
+        return NULL;
+    }
+    dev->i2c_port = i2c_port;
+    dev->addr = addr & 0x7F; // 7 bit addressing mode only
+    dev->lock = xSemaphoreCreateMutex(); 
+    return dev;
 }
 
-esp_err_t bno055_set_unit_selection(uint8_t unit)
+void bno055_destroy(bno055_dev_t *dev){
+    if (!dev){
+        ESP_LOGE(TAG, "Trying to delete a NULL BNO055 device");
+        return;
+    }
+    if (dev->lock) vSemaphoreDelete(dev->lock);
+    free(dev);
+}
+
+
+static esp_err_t bno055_write_register(bno055_dev_t *dev, uint8_t reg, uint8_t *data, size_t len) {
+    return i2c_bus_write(dev->addr, reg, data, len);
+}
+
+static esp_err_t bno055_read_register(bno055_dev_t *dev, uint8_t reg, uint8_t *data, size_t len) {
+    return i2c_bus_read(dev->addr, reg, data, len);
+}
+
+esp_err_t bno055_set_mode(bno055_dev_t *dev, uint8_t mode)
 {
-    return bno055_write_register(BNO055_UNIT_SEL, &unit, 1);
+    return bno055_write_register(dev, BNO055_OPR_MODE, &mode, 1); 
 }
 
-esp_err_t bno055_read_gyro(bno055_gyro_t* gyro_data)
+esp_err_t bno055_set_unit_selection(bno055_dev_t *dev, uint8_t unit)
+{
+    return bno055_write_register(dev, BNO055_UNIT_SEL, &unit, 1);
+}
+
+esp_err_t bno055_read_gyro(bno055_dev_t *dev, bno055_gyro_t* gyro_data)
 {
     // TODO Read unit register and adjust division
     uint8_t raw_gyro[6] = {0};
-    esp_err_t ret = bno055_read_register(BNO055_GYR_DATA_X_LSB, raw_gyro, 6);
+    esp_err_t ret = bno055_read_register(dev, BNO055_GYR_DATA_X_LSB, raw_gyro, 6);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read gyro data: %s", esp_err_to_name(ret));
         return ret;
@@ -51,11 +80,11 @@ esp_err_t bno055_read_gyro(bno055_gyro_t* gyro_data)
 }
 
 
-esp_err_t bno055_read_linear_acceleration(bno055_lin_accel_t* accel_data)
+esp_err_t bno055_read_linear_acceleration(bno055_dev_t *dev, bno055_lin_accel_t* accel_data)
 {
     // TODO Read unit register and adjust division
     uint8_t raw_lin[6] = {0};
-    esp_err_t ret = bno055_read_register(BNO055_LIA_DATA_X_LSB, raw_lin, 6);
+    esp_err_t ret = bno055_read_register(dev, BNO055_LIA_DATA_X_LSB, raw_lin, 6);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read linear acceleration data: %s", esp_err_to_name(ret));
         return ret;
@@ -72,10 +101,10 @@ esp_err_t bno055_read_linear_acceleration(bno055_lin_accel_t* accel_data)
     return ESP_OK;
 }
 
-esp_err_t bno055_read_quaternion(bno055_quaternion_t* quat_data){
+esp_err_t bno055_read_quaternion(bno055_dev_t *dev, bno055_quaternion_t* quat_data){
     // TODO Read unit register and adjust division
     uint8_t raw_quat[8] = {0};
-    esp_err_t ret = bno055_read_register(BNO055_QUA_DATA_W_LSB, raw_quat, 8);
+    esp_err_t ret = bno055_read_register(dev, BNO055_QUA_DATA_W_LSB, raw_quat, 8);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read quaternion data: %s", esp_err_to_name(ret));
         return ret;
@@ -94,10 +123,10 @@ esp_err_t bno055_read_quaternion(bno055_quaternion_t* quat_data){
     return ESP_OK;
 }
 
-uint8_t   bno055_get_chip_id(void)
+uint8_t   bno055_get_chip_id(bno055_dev_t *dev)
 {
     uint8_t chip_id = 0;
-    esp_err_t err = bno055_read_register(BNO055_CHIP_ID, &chip_id, 1);
+    esp_err_t err = bno055_read_register(dev, BNO055_CHIP_ID, &chip_id, 1);
     if (err != ESP_OK || chip_id == 0) {
         ESP_LOGE(TAG, "Failed to read Chip id");
         return 0x00;
@@ -106,29 +135,29 @@ uint8_t   bno055_get_chip_id(void)
 }
 
 
-esp_err_t bno055_init(uint8_t *opr_mode, uint8_t *unit_sel) {
+esp_err_t bno055_init(bno055_dev_t *dev, uint8_t *opr_mode, uint8_t *unit_sel) {
     uint8_t unit_selection = (unit_sel != NULL) ? *unit_sel : 0x00; // Default to m/s^2, degrees, Celsius
     uint8_t operation_mode = (opr_mode != NULL) ? *opr_mode : BNO055_OPERATION_MODE_NDOF; // Default to NDOF mode
     uint8_t page_zero = BNO055_PAGE_ZERO;
-    esp_err_t ret = bno055_write_register(BNO055_PAGE_ID, &page_zero, 1);
+    esp_err_t ret = bno055_write_register(dev, BNO055_PAGE_ID, &page_zero, 1);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set page to zero: %s", esp_err_to_name(ret));
         return ret;
     }
     uint8_t config = BNO055_OPERATION_MODE_CONFIG;
-    ret = bno055_write_register(BNO055_OPR_MODE, &config, 1);
+    ret = bno055_write_register(dev, BNO055_OPR_MODE, &config, 1);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set operation mode to CONFIG: %s", esp_err_to_name(ret));
         return ret;
     }
     vTaskDelay(pdMS_TO_TICKS(25));
-    ret = bno055_write_register(BNO055_UNIT_SEL, &unit_selection, 1);
+    ret = bno055_write_register(dev, BNO055_UNIT_SEL, &unit_selection, 1);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set unit selection: %s", esp_err_to_name(ret));
         return ret;
     }
     vTaskDelay(pdMS_TO_TICKS(25));
-    ret = bno055_write_register(BNO055_OPR_MODE, &operation_mode, 1);
+    ret = bno055_write_register(dev, BNO055_OPR_MODE, &operation_mode, 1);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set operation mode: %s", esp_err_to_name(ret));
         return ret;

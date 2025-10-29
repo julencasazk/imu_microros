@@ -192,6 +192,8 @@ typedef struct
     float y;
     float z;
 } bno055_lin_accel_t;
+
+typedef struct bno055_dev bno055_dev_t; // Defined in source file
 // ===============================================
 // DATA TYPES END
 
@@ -200,13 +202,82 @@ typedef struct
 #define BNO055_I2C_ADDR_PRIMARY   0x28
 #define BNO055_I2C_ADDR_ALTERNATE 0x29
 
-esp_err_t bno055_init(uint8_t *opr_mode, uint8_t *unit_sel);
-esp_err_t bno055_set_mode(uint8_t mode);
-esp_err_t bno055_read_gyro(bno055_gyro_t* gyro_data);
-esp_err_t bno055_read_linear_acceleration(bno055_lin_accel_t* accel_data);
-esp_err_t bno055_read_quaternion(bno055_quaternion_t* quat_data);
-uint8_t bno055_get_chip_id(void);
-esp_err_t bno055_set_unit_selection(uint8_t unit);
+bno055_dev_t *bno055_create(i2c_port_t i2c_port, uint8_t addr);
+void bno055_destroy(bno055_dev_t *dev);
+
+/**
+ * @brief Initializes a BNO055 device to default values
+ * 
+ * This function initializes the BNO055 device by setting it to page 0,
+ * configuring the operation mode to CONFIG, setting the unit selection,
+ * and finally switching to the desired operation mode.
+ * 
+ * @param dev Pointer to the BNO055 device handle
+ * @param opr_mode Pointer to the desired operation mode. If NULL, defaults to NDOF mode.
+ * @param unit_sel Pointer to the desired unit selection. If NULL, defaults to m/s^2, degrees, Celsius.
+ * 
+ * @return esp_err_t ESP_OK on success, or an error code on failure
+ */
+esp_err_t bno055_init(bno055_dev_t *dev, uint8_t *opr_mode, uint8_t *unit_sel);
+
+/**
+ * @brief Sets the operation mode of the BNO055 device
+ * 
+ * @param dev Pointer to the BNO055 device handle
+ * @param mode The desired operation mode to set
+ *
+ * @return esp_err_t ESP_OK on success, or an error code on failure
+ */
+esp_err_t bno055_set_mode(bno055_dev_t *dev, uint8_t mode);
+
+/**
+ * @brief Reads gyroscope data from the BNO055 device
+ *
+ * @param dev Pointer to the BNO055 device handle
+ * @param gyro_data Pointer to a bno055_gyro_t structure to store the gyroscope data
+ *
+ * @return esp_err_t ESP_OK on success, or an error code on failure
+ */
+esp_err_t bno055_read_gyro(bno055_dev_t *dev, bno055_gyro_t* gyro_data);
+/**
+ * @brief Reads linear acceleration data from the BNO055 device
+ *
+ * @param dev Pointer to the BNO055 device handle
+ * @param accel_data Pointer to a bno055_lin_accel_t structure to store the linear acceleration data
+ *
+ * @return esp_err_t ESP_OK on success, or an error code on failure
+ */
+esp_err_t bno055_read_linear_acceleration(bno055_dev_t *dev, bno055_lin_accel_t* accel_data);
+
+/**
+ * @brief Reads quaternion data from the BNO055 device
+ *
+ * @param dev Pointer to the BNO055 device handle
+ * @param quat_data Pointer to a bno055_quaternion_t structure to store the quaternion
+ *
+ * @return esp_err_t ESP_OK on success, or an error code on failure
+ */
+esp_err_t bno055_read_quaternion(bno055_dev_t *dev, bno055_quaternion_t* quat_data);
+
+/**
+ * @brief Retrieves the chip ID of the BNO055 device
+ *
+ * @param dev Pointer to the BNO055 device handle
+ *
+ * @return uint8_t The chip ID value, or 0x00 if reading fails
+ * 
+ */
+uint8_t bno055_get_chip_id(bno055_dev_t *dev);
+
+/**
+ * @brief Sets the unit selection for the BNO055 device
+ *
+ * @param dev Pointer to the BNO055 device handle
+ * @param unit The unit selection value to set
+ *
+ * @return esp_err_t ESP_OK on success, or an error code on failure
+ */
+esp_err_t bno055_set_unit_selection(bno055_dev_t *dev, uint8_t unit);
 
 
 #endif // BNO055_H
