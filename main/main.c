@@ -35,7 +35,7 @@
 
 // PRIVATE VARS
 // ========================================
-const unsigned int timer_period = RCL_MS_TO_NS(10);
+const unsigned int timer_period = RCL_MS_TO_NS(5);
 rcl_publisher_t imu_publisher;
 
 static const char IMU_FRAME_ID[] = "imu_link"; 
@@ -144,8 +144,8 @@ void micro_ros_task(void* arg)
     imu_msg.linear_acceleration_covariance[0] = -1.0;
 
     while(1){
-        RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10)));
-        vTaskDelay(pdMS_TO_TICKS(5));
+        RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1)));
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 
     // free resources
@@ -163,7 +163,7 @@ void micro_ros_task(void* arg)
 void imu_read_task(void * arg)
 {
 
-   ESP_ERROR_CHECK(i2c_bus_init(I2C_NUM_0, GPIO_NUM_21, GPIO_NUM_22, 100000));
+   ESP_ERROR_CHECK(i2c_bus_init(I2C_NUM_0, GPIO_NUM_21, GPIO_NUM_22, 400000));
    vTaskDelay(pdMS_TO_TICKS(1000));
    
    i2c_bus_scan();
@@ -197,15 +197,15 @@ void imu_read_task(void * arg)
             ESP_LOGE("IMU_TASK", "bno055_read_linear_acceleration failed");
         }
 
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(4));
     }
 }
 
 void app_main(void)
 {
-    
-    //esp_log_level_set("*", ESP_LOG_NONE);
-
+    // Disabling UART logging avoids stealing bandwidth
+    // esp_log_level_set("*", ESP_LOG_NONE);
+    // From my testing, it makes no difference
 #if defined(RMW_UXRCE_TRANSPORT_CUSTOM)
     
     xTaskCreate(micro_ros_task,
