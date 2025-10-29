@@ -47,8 +47,6 @@ bno055_quaternion_t orientation_data = {0};
 
 sensor_msgs__msg__Imu imu_msg;
 
-static uart_port_t uart_port = UART_NUM_0;
-
 bno055_dev_t* imu_dev;
 // ========================================
 // END PRIVATE VARS
@@ -90,8 +88,10 @@ static void timer_cb(rcl_timer_t* timer, int64_t last_call_time)
 
 
 
-void micro_ros_task(void)
+void micro_ros_task(void* arg)
 {
+    
+    uart_port_t uart_port = UART_NUM_0;
     // Set custom transport (In this case UART through USB-to-UART Bridge)
     rmw_uros_set_custom_transport(
         true,
