@@ -48,9 +48,10 @@ bno055_quaternion_t orientation_data = {0};
 sensor_msgs__msg__Imu imu_msg;
 
 static uart_port_t uart_port = UART_NUM_0;
+
+bno055_dev_t* imu_dev;
 // ========================================
 // END PRIVATE VARS
-;
 
 
 // CALLBACK FUNCTIONS
@@ -79,7 +80,6 @@ static void timer_cb(rcl_timer_t* timer, int64_t last_call_time)
             .z = orientation_data.z
         };
 
-        // Stamp using ESP-IDF high-res timer (monotonic since boot)
         int64_t us = esp_timer_get_time();
         imu_msg.header.stamp.sec = (int32_t)(us / 1000000LL);
         imu_msg.header.stamp.nanosec = (uint32_t)((us % 1000000LL) * 1000);
@@ -167,8 +167,11 @@ void imu_read_task(void * arg)
    vTaskDelay(pdMS_TO_TICKS(1000));
    
    i2c_bus_scan();
+   
+   imu_dev = bno055_create(I2C_NUM_0, BNO055_I2C_ADDR_PRIMARY);
 
-   uint8_t chip_id = bno055_get_chip_id();
+
+   uint8_t chip_id = bno055_get_chip_id(imu_dev);
    if (chip_id != 0xA0)
    {
        ESP_LOGE("IMU_TASK", "Chip id not correct");
@@ -177,20 +180,20 @@ void imu_read_task(void * arg)
 
    uint8_t mode = BNO055_OPERATION_MODE_IMU;
    uint8_t units = 0x10;
-   ESP_ERROR_CHECK(bno055_init(&mode, &units));
+   ESP_ERROR_CHECK(bno055_init(imu_dev, &mode, &units));
    vTaskDelay(pdMS_TO_TICKS(1000));
  
     while (true)
     {
-        if (bno055_read_gyro(&angular_vel_data) != ESP_OK) {
+        if (bno055_read_gyro(imu_dev, &angular_vel_data) != ESP_OK) {
             ESP_LOGE("IMU_TASK", "bno055_read_gyro failed");
         }
 
-        if (bno055_read_quaternion(&orientation_data) != ESP_OK) {
+        if (bno055_read_quaternion(imu_dev, &orientation_data) != ESP_OK) {
             ESP_LOGE("IMU_TASK", "bno055_read_quaternion failed");
         }
 
-        if (bno055_read_linear_acceleration(&linear_accel_data) != ESP_OK) {
+        if (bno055_read_linear_acceleration(imu_dev, &linear_accel_data) != ESP_OK) {
             ESP_LOGE("IMU_TASK", "bno055_read_linear_acceleration failed");
         }
 
