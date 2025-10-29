@@ -44,12 +44,13 @@ static const char IMU_FRAME_ID[] = "imu_link";
 bno055_gyro_t angular_vel_data = {0};
 bno055_lin_accel_t linear_accel_data = {0};
 bno055_quaternion_t orientation_data = {0};
-// ========================================
-// END PRIVATE VARS
 
 sensor_msgs__msg__Imu imu_msg;
 
-static uart_port_t uart_port = UART_NUM_0;
+static uart_port_t uart_port = UART_NUM_0
+// ========================================
+// END PRIVATE VARS
+;
 
 
 // CALLBACK FUNCTIONS
