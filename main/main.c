@@ -47,7 +47,7 @@ bno055_quaternion_t orientation_data = {0};
 
 sensor_msgs__msg__Imu imu_msg;
 
-static uart_port_t uart_port = UART_NUM_0
+static uart_port_t uart_port = UART_NUM_0;
 // ========================================
 // END PRIVATE VARS
 ;
