@@ -11,11 +11,16 @@
 // --- micro-ROS Transports ---
 #define UART_BUFFER_SIZE (512)
 
+#ifndef CONFIG_MICROROS_UART_BAUDRATE
+#define CONFIG_MICROROS_UART_BAUDRATE 921600
+#endif
+
+
 bool esp32_serial_open(struct uxrCustomTransport * transport){
     size_t * uart_port = (size_t*) transport->args;
 
     uart_config_t uart_config = {
-        .baud_rate = 115200,
+        .baud_rate = CONFIG_MICROROS_UART_BAUDRATE,
         .data_bits = UART_DATA_8_BITS,
         .parity    = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
