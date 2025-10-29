@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include "esp_err.h"
+#include "driver/i2c.h"
 
 // ============================================================================
 // Bosch BNO055 9-DOF IMU Register Address Map
