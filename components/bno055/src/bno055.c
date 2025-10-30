@@ -1,7 +1,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "bno055.h"
-#include "i2c_bus.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -41,11 +40,17 @@ void bno055_destroy(bno055_dev_t *dev){
 
 
 static esp_err_t bno055_write_register(bno055_dev_t *dev, uint8_t reg, uint8_t *data, size_t len) {
-    return i2c_bus_write(dev->addr, reg, data, len);
+    // The BNO055 expects a write secuence of DEVICE_ADDR -> REG -> DATA0 -> DATA1 -> STOP
+    // so the register address to write to needs to be included in the sequence
+
+    uint8_t complete_buff[1+len];
+    complete_buff[0] = reg;
+    memcpy(&complete_buff[1], data, len);
+    return i2c_master_write_to_device(dev->i2c_port, dev->addr, complete_buff, len + 1, pdMS_TO_TICKS(1000));
 }
 
 static esp_err_t bno055_read_register(bno055_dev_t *dev, uint8_t reg, uint8_t *data, size_t len) {
-    return i2c_bus_read(dev->addr, reg, data, len);
+    return i2c_master_write_read_device(dev->i2c_port, dev->addr, &reg, 1, data, len, pdMS_TO_TICKS(1000));
 }
 
 esp_err_t bno055_set_mode(bno055_dev_t *dev, uint8_t mode)
@@ -119,6 +124,8 @@ esp_err_t bno055_read_quaternion(bno055_dev_t *dev, bno055_quaternion_t* quat_da
     quat_data->x = ((float)raw_quat_x )/ 16384.0f;
     quat_data->y = ((float)raw_quat_y )/ 16384.0f;
     quat_data->z = ((float)raw_quat_z )/ 16384.0f;
+    
+    printf("\nRaw X: %f\nRaw Y: %f\nRaw Z: %f\nRaw W: %f\n", quat_data->x, quat_data->y, quat_data->z, quat_data->w);
 
     return ESP_OK;
 }

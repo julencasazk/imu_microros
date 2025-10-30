@@ -42,64 +42,6 @@ esp_err_t i2c_bus_init(i2c_port_t i2c_num, gpio_num_t sda_io, gpio_num_t scl_io,
     return ESP_OK;
 }
 
-esp_err_t i2c_bus_write(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *data, size_t len)
-{
-    i2c_cmd_handle_t handle = i2c_cmd_link_create();
-    if (!handle) {
-        ESP_LOGE(TAG, "Failed to create I2C command link");
-        return ESP_ERR_NO_MEM;
-    }
-
-    i2c_master_start(handle);
-    i2c_master_write_byte(handle, (dev_addr << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(handle, reg_addr, true);
-    if (len) {
-        i2c_master_write(handle, (uint8_t *)data, len, true);
-    }
-    i2c_master_stop(handle);
-
-    esp_err_t ret = i2c_master_cmd_begin(s_i2c_port, handle, pdMS_TO_TICKS(1000));
-    i2c_cmd_link_delete(handle);
-
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Write 0x%02X reg 0x%02X failed: %s", dev_addr, reg_addr, esp_err_to_name(ret));
-    }
-    return ret;
-}
-
-esp_err_t i2c_bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *data, size_t len)
-{
-    if (len == 0) {
-        ESP_LOGE(TAG, "Read length must be > 0");
-        return ESP_ERR_INVALID_SIZE;
-    }
-
-    i2c_cmd_handle_t handle = i2c_cmd_link_create();
-    if (!handle) {
-        ESP_LOGE(TAG, "Failed to create I2C command link");
-        return ESP_ERR_NO_MEM;
-    }
-
-    i2c_master_start(handle);
-    i2c_master_write_byte(handle, (dev_addr << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(handle, reg_addr, true);
-    i2c_master_start(handle);
-    i2c_master_write_byte(handle, (dev_addr << 1) | I2C_MASTER_READ, true);
-    if (len > 1) {
-        i2c_master_read(handle, data, len - 1, I2C_MASTER_ACK);
-    }
-    i2c_master_read_byte(handle, data + len - 1, I2C_MASTER_NACK);
-    i2c_master_stop(handle);
-
-    esp_err_t ret = i2c_master_cmd_begin(s_i2c_port, handle, pdMS_TO_TICKS(1000));
-    i2c_cmd_link_delete(handle);
-
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Read 0x%02X reg 0x%02X failed: %s", dev_addr, reg_addr, esp_err_to_name(ret));
-    }
-    return ret;
-}
-
 void i2c_bus_scan(void)
 {
     ESP_LOGI(TAG, "Scanning I2C bus on port %d...", s_i2c_port);
