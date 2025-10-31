@@ -377,6 +377,12 @@ CONFIG_MICRO_ROS_APP_TASK_PRIO=5
 # end of micro-ROS example-app settings
 
 #
+# BNO055 Configuration
+#
+CONFIG_BNO055_API=y
+# end of BNO055 Configuration
+
+#
 # micro-ROS Settings
 #
 CONFIG_MICRO_ROS_ESP_XRCE_DDS_MIDDLEWARE=y
