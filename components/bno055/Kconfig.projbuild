@@ -1,0 +1,10 @@
+menu "BNO055 Configuration"
+
+config BNO055_API
+    bool "Enable BNO055 API"
+    default y
+    help
+      Enable the BNO055 API. When enabled, sdkconfig.h will contain:
+      #define CONFIG_BNO055_API 1
+
+endmenu
